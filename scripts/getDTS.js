@@ -21,8 +21,8 @@ const go = async () => {
     mkdirSync(vendor)
   }
 
-  const host = 'https://www.typescriptlang.org/v2'
-  // const host = "http://localhost:8000";
+  // const host = 'https://www.typescriptlang.org/v2'
+  const host = "http://localhost:8000";
 
   await getFileAndStoreLocally(host + '/js/sandbox/tsWorker.d.ts', join(vendor, 'tsWorker.d.ts'))
 

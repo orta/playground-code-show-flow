@@ -1,8 +1,9 @@
-declare type Sandbox = import('./sandbox').Sandbox;
-import type React from 'react';
-export { PluginUtils } from './pluginUtils';
+declare type Sandbox = import("./sandbox").Sandbox;
+import { PluginUtils } from "./pluginUtils";
+import type React from "react";
+export { PluginUtils } from "./pluginUtils";
 export declare type PluginFactory = {
-    (i: (key: string, components?: any) => string): PlaygroundPlugin;
+    (i: (key: string, components?: any) => string, utils: PluginUtils): PlaygroundPlugin;
 };
 /** The interface of all sidebar plugins */
 export interface PlaygroundPlugin {
@@ -17,9 +18,9 @@ export interface PlaygroundPlugin {
     /** After we show the tab */
     didMount?: (sandbox: Sandbox, container: HTMLDivElement) => void;
     /** Model changes while this plugin is actively selected  */
-    modelChanged?: (sandbox: Sandbox, model: import('monaco-editor').editor.ITextModel) => void;
+    modelChanged?: (sandbox: Sandbox, model: import("monaco-editor").editor.ITextModel, container: HTMLDivElement) => void;
     /** Delayed model changes while this plugin is actively selected, useful when you are working with the TS API because it won't run on every keypress */
-    modelChangedDebounce?: (sandbox: Sandbox, model: import('monaco-editor').editor.ITextModel) => void;
+    modelChangedDebounce?: (sandbox: Sandbox, model: import("monaco-editor").editor.ITextModel, container: HTMLDivElement) => void;
     /** Before we remove the tab */
     willUnmount?: (sandbox: Sandbox, container: HTMLDivElement) => void;
     /** After we remove the tab */
@@ -28,8 +29,14 @@ export interface PlaygroundPlugin {
     data?: any;
 }
 interface PlaygroundConfig {
+    /** Language like "en" / "ja" etc */
     lang: string;
+    /** Site prefix, like "v2" during the pre-release */
     prefix: string;
+    /** Optional plugins so that we can re-use the playground with different sidebars */
+    plugins?: PluginFactory[];
+    /** Should this playground load up custom plugins from localStorage? */
+    supportCustomPlugins: boolean;
 }
 export declare const setupPlayground: (sandbox: {
     config: {
@@ -75,6 +82,7 @@ export declare const setupPlayground: (sandbox: {
     createURLQueryWithCompilerOptions: (sandbox: any, paramOverrides?: any) => string;
     getTwoSlashComplierOptions: (code: string) => any;
     languageServiceDefaults: import("monaco-editor").languages.typescript.LanguageServiceDefaults;
+    filepath: string;
 }, monaco: typeof import("monaco-editor"), config: PlaygroundConfig, i: (key: string) => string, react: typeof React) => {
     exporter: {
         openProjectInStackBlitz: () => void;
@@ -87,5 +95,7 @@ export declare const setupPlayground: (sandbox: {
     };
     // ui: import("./createUI").UI;
     registerPlugin: (plugin: PlaygroundPlugin) => void;
+    plugins: PlaygroundPlugin[];
+    tabs: HTMLButtonElement[];
 };
 export declare type Playground = ReturnType<typeof setupPlayground>;

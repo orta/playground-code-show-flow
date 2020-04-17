@@ -1,17 +1,19 @@
-## TypeScript Playground Plugin
+## Code Flow Analysis Visualizer
 
-My new plugin for the TypeScript playground.
+Visualize some of the Code Flow Analysis
+
+![./screenshots/flow.png](./screenshots/flow.png)
 
 ## Running this plugin
 
-- [Click this link](https://typescriptlang.org/play?install-plugin=[name]) to install
+- [Click this link](https://www.typescriptlang.org/play?install-plugin=playground-code-show-flow) to install
 
 or
 
 - Open up the TypeScript Playground
 - Go the "Options" in the sidebar
 - Look for "Plugins from npm"
-- Add "[name]"
+- Add "playground-code-show-flow"
 - Reload the browser
 
 Then it will show up as a tab in the sidebar.

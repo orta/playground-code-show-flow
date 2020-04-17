@@ -1,8 +1,7 @@
-import { TypeScriptWorker } from "./tsWorker";// import { TypeScriptWorker } from './tsWorker';
-// import lzstring from './vendor/lzstring.min';
-
-import * as tsvfs from './typescript-vfs';
-declare type CompilerOptions = import('monaco-editor').languages.typescript.CompilerOptions;
+import { TypeScriptWorker } from "./tsWorker";// import { TypeScriptWorker } from "./tsWorker";
+// import lzstring from "./lzstring.min";
+import * as tsvfs from "./typescript-vfs";
+declare type CompilerOptions = import("monaco-editor").languages.typescript.CompilerOptions;
 /**
  * These are settings for the playground which are the equivalent to props in React
  * any changes to it should require a new setup of the playground
@@ -15,7 +14,7 @@ export declare type PlaygroundConfig = {
     /** Compiler options which are automatically just forwarded on */
     compilerOptions: CompilerOptions;
     /** Optional monaco settings overrides */
-    monacoSettings?: import('monaco-editor').editor.IEditorOptions;
+    monacoSettings?: import("monaco-editor").editor.IEditorOptions;
     /** Acquire types via type acquisition */
     acquireTypes: boolean;
     /** Support twoslash compiler options */
@@ -147,7 +146,7 @@ export declare const createTypeScriptSandbox: (partialConfig: Partial<{
     /** Gets a monaco-typescript worker, this will give you access to a language server. Note: prefer this for language server work because it happens on a webworker . */
     getWorkerProcess: () => Promise<TypeScriptWorker>;
     /** A copy of require("@typescript/vfs") this can be used to quickly set up an in-memory compiler runs for ASTs, or to get complex language server results (anything above has to be serialized when passed)*/
-    tsvfs: typeof tsvfs;
+    // tsvfs: typeof tsvfs;
     /** Get all the different emitted files after TypeScript is run */
     getEmitResult: () => Promise<import("typescript").EmitOutput>;
     /** Gets just the JavaScript for your sandbox, will transpile if in TS only */
@@ -197,6 +196,8 @@ export declare const createTypeScriptSandbox: (partialConfig: Partial<{
     getTwoSlashComplierOptions: (code: string) => any;
     /** Gets to the current monaco-language, this is how you talk to the background webworkers */
     languageServiceDefaults: import("monaco-editor").languages.typescript.LanguageServiceDefaults;
+    /** The path which represents the current file using the current compiler options */
+    filepath: string;
 };
 export declare type Sandbox = ReturnType<typeof createTypeScriptSandbox>;
 export {};
