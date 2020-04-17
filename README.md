@@ -6,7 +6,7 @@ Visualize some of the Code Flow Analysis
 
 ## Running this plugin
 
-- [Click this link](https://www.typescriptlang.org/play?install-plugin=playground-code-show-flow) to install
+- [Click this link](https://www.staging-typescript.org/play?install-plugin=playground-code-show-flow) to install
 
 or
 
