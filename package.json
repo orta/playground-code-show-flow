@@ -1,6 +1,6 @@
 {
   "name": "playground-code-show-flow",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "main": "dist/index.js",
   "license": "MIT",
   "keywords": [
