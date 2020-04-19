@@ -1,11 +1,25 @@
-// Apache License
-// from https://github.com/microsoft/TypeScript
-
+type Node = import("typescript").Node;
 type FunctionExpression = Node;
 type ArrowFunction = Node;
 type MethodDeclaration = Node;
 type Expression = Node;
 type SourceFile = Node;
+
+
+export interface FlowGraphNode {
+  id: number;
+  flowNode: FlowNode;
+  edges: FlowGraphEdge[];
+  text: string;
+  lane: number;
+  endLane: number;
+  level: number;
+}
+
+export interface FlowGraphEdge {
+  source: FlowGraphNode;
+  target: FlowGraphNode;
+}
 
 interface SwitchStatement extends Node {
   caseBlock: CaseBlock;
@@ -172,20 +186,6 @@ export function formatControlFlowGraph(flowNode: FlowNode) {
     NoChildren = 1 << 4,
   }
 
-  interface FlowGraphNode {
-    id: number;
-    flowNode: FlowNode;
-    edges: FlowGraphEdge[];
-    text: string;
-    lane: number;
-    endLane: number;
-    level: number;
-  }
-
-  interface FlowGraphEdge {
-    source: FlowGraphNode;
-    target: FlowGraphNode;
-  }
 
   const hasAntecedentFlags =
     FlowFlags.Assignment |
@@ -213,7 +213,10 @@ export function formatControlFlowGraph(flowNode: FlowNode) {
 
   return {
     text: renderGraph(),
-    root
+    root,
+    getChildren,
+    hasNode,
+    getNodeText
   }
 
   function isFlowSwitchClause(f: FlowNode): f is FlowSwitchClause {
