@@ -1,11 +1,15 @@
 {
   "name": "playground-code-show-flow",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "main": "dist/index.js",
   "license": "MIT",
   "keywords": [
     "playground-plugin"
   ],
+  "description": "Visualize TypeScript's code inference flow nodes",
+  "repository": {
+    "url": "https://github.com/orta/playground-code-show-flow"
+  },
   "scripts": {
     "build": "rollup -c rollup.config.js;",
     "compile": "tsc",
