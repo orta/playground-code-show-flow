@@ -1,6 +1,5 @@
 import type { PlaygroundPlugin, PluginUtils } from "./vendor/playground";
 import { SourceFile, Node } from "typescript";
-import type { IDisposable } from "monaco-editor";
 
 import { getNodeAtPosition } from "./astHover";
 import { formatControlFlowGraph, graphInit, FlowGraphNode } from "./graph";
