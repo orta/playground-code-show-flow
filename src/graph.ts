@@ -14,6 +14,7 @@ export interface FlowGraphNode {
   lane: number;
   endLane: number;
   level: number;
+  circular: any
 }
 
 export interface FlowGraphEdge {
@@ -56,6 +57,7 @@ interface TypeScriptModule {
     readonly ArrayMutation: number;
     readonly Call: number;
     readonly Referenced: number;
+    readonly ReduceLabel: number,
     readonly Shared: number;
     readonly PreFinally: number;
     readonly AfterFinally: number;
@@ -186,6 +188,21 @@ export function formatControlFlowGraph(flowNode: FlowNode) {
     NoChildren = 1 << 4,
   }
 
+  interface FlowGraphNode {
+    id: number;
+    flowNode: FlowNode;
+    edges: FlowGraphEdge[];
+    text: string;
+    lane: number;
+    endLane: number;
+    level: number;
+    circular: boolean | "circularity";
+  }
+
+  interface FlowGraphEdge {
+    source: FlowGraphNode;
+    target: FlowGraphNode;
+  }
 
   const hasAntecedentFlags =
     FlowFlags.Assignment |
@@ -193,17 +210,21 @@ export function formatControlFlowGraph(flowNode: FlowNode) {
     FlowFlags.SwitchClause |
     FlowFlags.ArrayMutation |
     FlowFlags.Call |
-    FlowFlags.PreFinally |
-    FlowFlags.AfterFinally;
+    FlowFlags.ReduceLabel;
 
   const hasNodeFlags =
-    FlowFlags.Start | FlowFlags.Assignment | FlowFlags.Call | FlowFlags.Condition | FlowFlags.ArrayMutation;
+    FlowFlags.Start |
+    FlowFlags.Assignment |
+    FlowFlags.Call |
+    FlowFlags.Condition |
+    FlowFlags.ArrayMutation;
 
   const links: Record<number, FlowGraphNode> = Object.create(/*o*/ null); // eslint-disable-line no-null/no-null
   const nodes: FlowGraphNode[] = [];
   const edges: FlowGraphEdge[] = [];
-  const root = buildGraphNode(flowNode);
+  const root = buildGraphNode(flowNode, new Set());
   for (const node of nodes) {
+    node.text = renderFlowNode(node.flowNode, node.circular);
     computeLevel(node);
   }
 
@@ -255,35 +276,43 @@ export function formatControlFlowGraph(flowNode: FlowNode) {
     return parents;
   }
 
-  function buildGraphNode(flowNode: FlowNode) {
+  function buildGraphNode(flowNode: FlowNode, seen: Set<FlowNode>): FlowGraphNode {
     const id = getDebugFlowNodeId(flowNode);
     let graphNode = links[id];
-    if (!graphNode) {
-      links[id] = graphNode = {
-        id,
+    if (graphNode && seen.has(flowNode)) {
+      graphNode.circular = true;
+      graphNode = {
+        id: -1,
         flowNode,
         edges: [],
-        text: renderFlowNode(flowNode),
+        text: "",
         lane: -1,
         endLane: -1,
         level: -1,
+        circular: "circularity"
       };
       nodes.push(graphNode);
-      if (!(flowNode.flags & FlowFlags.PreFinally)) {
-        if (hasAntecedents(flowNode)) {
-          for (const antecedent of flowNode.antecedents) {
-            buildGraphEdge(graphNode, antecedent);
-          }
-        } else if (hasAntecedent(flowNode)) {
-          buildGraphEdge(graphNode, flowNode.antecedent);
+      return graphNode;
+    }
+    seen.add(flowNode);
+    if (!graphNode) {
+      links[id] = graphNode = { id, flowNode, edges: [], text: "", lane: -1, endLane: -1, level: -1, circular: false };
+      nodes.push(graphNode);
+      if (hasAntecedents(flowNode)) {
+        for (const antecedent of flowNode.antecedents) {
+          buildGraphEdge(graphNode, antecedent, seen);
         }
       }
+      else if (hasAntecedent(flowNode)) {
+        buildGraphEdge(graphNode, flowNode.antecedent, seen);
+      }
     }
+    seen.delete(flowNode);
     return graphNode;
   }
 
-  function buildGraphEdge(source: FlowGraphNode, antecedent: FlowNode) {
-    const target = buildGraphNode(antecedent);
+  function buildGraphEdge(source: FlowGraphNode, antecedent: FlowNode, seen: Set<FlowNode>) {
+    const target = buildGraphNode(antecedent, seen);
     const edge: FlowGraphEdge = { source, target };
     edges.push(edge);
     source.edges.push(edge);
@@ -298,7 +327,7 @@ export function formatControlFlowGraph(flowNode: FlowNode) {
     for (const parent of getParents(node)) {
       level = Math.max(level, computeLevel(parent) + 1);
     }
-    return (node.level = level);
+    return node.level = level;
   }
 
   function computeHeight(node: FlowGraphNode): number {
@@ -344,8 +373,7 @@ export function formatControlFlowGraph(flowNode: FlowNode) {
     if (flags & FlowFlags.SwitchClause) return "SwitchClause";
     if (flags & FlowFlags.ArrayMutation) return "ArrayMutation";
     if (flags & FlowFlags.Call) return "Call";
-    if (flags & FlowFlags.PreFinally) return "PreFinally";
-    if (flags & FlowFlags.AfterFinally) return "AfterFinally";
+    if (flags & FlowFlags.ReduceLabel) return "ReduceLabel";
     if (flags & FlowFlags.Unreachable) return "Unreachable";
     throw new Error();
   }
@@ -355,25 +383,30 @@ export function formatControlFlowGraph(flowNode: FlowNode) {
     return getSourceTextOfNodeFromSourceFile(sourceFile, node, /*includeTrivia*/ false);
   }
 
-  function renderFlowNode(flowNode: FlowNode) {
+  function renderFlowNode(flowNode: FlowNode, circular: boolean | "circularity") {
     let text = getHeader(flowNode.flags);
+    if (circular) {
+      text = `${text}#${getDebugFlowNodeId(flowNode)}`;
+    }
     if (hasNode(flowNode)) {
       if (flowNode.node) {
         text += ` (${getNodeText(flowNode.node)})`;
       }
-    } else if (isFlowSwitchClause(flowNode)) {
+    }
+    else if (isFlowSwitchClause(flowNode)) {
       const clauses: string[] = [];
       for (let i = flowNode.clauseStart; i < flowNode.clauseEnd; i++) {
         const clause = flowNode.switchStatement.caseBlock.clauses[i];
         if (isDefaultClause(clause)) {
           clauses.push("default");
-        } else {
+        }
+        else {
           clauses.push(getNodeText(clause.expression));
         }
       }
       text += ` (${clauses.join(", ")})`;
     }
-    return text;
+    return circular === "circularity" ? `Circular(${text})` : text;
   }
 
   function renderGraph() {
@@ -431,7 +464,8 @@ export function formatControlFlowGraph(flowNode: FlowNode) {
           if (column < columnCount - 1) {
             writeLane(lane, repeat(fill, columnWidths[column] + 1));
           }
-        } else {
+        }
+        else {
           writeLane(lane, node.text);
           if (column < columnCount - 1) {
             writeLane(lane, " ");
@@ -439,10 +473,7 @@ export function formatControlFlowGraph(flowNode: FlowNode) {
           }
         }
         writeLane(lane, getBoxCharacter(connector));
-        writeLane(
-          lane,
-          connector & Connection.Right && column < columnCount - 1 && !grid[column + 1][lane] ? BoxCharacter.lr : " "
-        );
+        writeLane(lane, connector & Connection.Right && column < columnCount - 1 && !grid[column + 1][lane] ? BoxCharacter.lr : " ");
       }
     }
 
@@ -455,28 +486,17 @@ export function formatControlFlowGraph(flowNode: FlowNode) {
 
   function getBoxCharacter(connector: Connection) {
     switch (connector) {
-      case Connection.UpDown:
-        return BoxCharacter.ud;
-      case Connection.LeftRight:
-        return BoxCharacter.lr;
-      case Connection.UpLeft:
-        return BoxCharacter.ul;
-      case Connection.UpRight:
-        return BoxCharacter.ur;
-      case Connection.DownLeft:
-        return BoxCharacter.dl;
-      case Connection.DownRight:
-        return BoxCharacter.dr;
-      case Connection.UpDownLeft:
-        return BoxCharacter.udl;
-      case Connection.UpDownRight:
-        return BoxCharacter.udr;
-      case Connection.UpLeftRight:
-        return BoxCharacter.ulr;
-      case Connection.DownLeftRight:
-        return BoxCharacter.dlr;
-      case Connection.UpDownLeftRight:
-        return BoxCharacter.udlr;
+      case Connection.UpDown: return BoxCharacter.ud;
+      case Connection.LeftRight: return BoxCharacter.lr;
+      case Connection.UpLeft: return BoxCharacter.ul;
+      case Connection.UpRight: return BoxCharacter.ur;
+      case Connection.DownLeft: return BoxCharacter.dl;
+      case Connection.DownRight: return BoxCharacter.dr;
+      case Connection.UpDownLeft: return BoxCharacter.udl;
+      case Connection.UpDownRight: return BoxCharacter.udr;
+      case Connection.UpLeftRight: return BoxCharacter.ulr;
+      case Connection.DownLeftRight: return BoxCharacter.dlr;
+      case Connection.UpDownLeftRight: return BoxCharacter.udlr;
     }
     return " ";
   }
@@ -484,7 +504,8 @@ export function formatControlFlowGraph(flowNode: FlowNode) {
   function fill<T>(array: T[], value: T) {
     if (array.fill) {
       array.fill(value);
-    } else {
+    }
+    else {
       for (let i = 0; i < array.length; i++) {
         array[i] = value;
       }

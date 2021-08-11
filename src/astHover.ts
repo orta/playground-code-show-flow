@@ -45,6 +45,21 @@ export function getChildrenFunction(mode: TreeMode, sourceFile: SourceFile) {
   }
 }
 
+export function getNodeAtPosition(ts: typeof import("typescript"), sourceFile: SourceFile, position: number): Node {
+    let current: Node = sourceFile;
+    const getContainingChild = (child: Node) => {
+        if (child.pos <= position && (position < child.end || (position === child.end && (child.kind === ts.SyntaxKind.EndOfFileToken)))) {
+            return child;
+        }
+    };
+    while (true) {
+        const child = ts.forEachChild(current, getContainingChild);
+        if (!child) {
+            return current;
+        }
+        current = child;
+    }
+}
 
 export function getDescendantAtRange(ts: typeof import("typescript"), mode: TreeMode, sourceFile: SourceFile, range: [number, number]) {
     const getChildren = getChildrenFunction(mode, sourceFile);

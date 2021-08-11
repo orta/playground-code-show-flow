@@ -2,12 +2,11 @@ import type { PlaygroundPlugin, PluginUtils } from "./vendor/playground";
 import { SourceFile, Node } from "typescript";
 import type { IDisposable } from "monaco-editor";
 
-import { getDescendantAtRange, TreeMode } from "./astHover";
+import { getNodeAtPosition } from "./astHover";
 import { formatControlFlowGraph, graphInit, FlowGraphNode } from "./graph";
 
 const makePlugin = (utils: PluginUtils) => {
   let sourceFile: SourceFile | undefined;
-  let disposable: IDisposable | undefined;
   let decorations: string[] = [];
 
   const customPlugin: PlaygroundPlugin = {
@@ -16,22 +15,25 @@ const makePlugin = (utils: PluginUtils) => {
     didMount: (sandbox, container) => {
       const ds = utils.createDesignSystem(container);
 
-      ds.subtitle("Flow Analysis");
+      ds.subtitle("Code Flow Analysis");
+      ds.p("This plugin will look backwards from where your cursor is placed, to find the flow nodes which affected its types.")
+
+      const graph = document.createElement("div")
+      container.appendChild(graph)
+      const infoDS = utils.createDesignSystem(graph)
 
       graphInit(sandbox.ts as any);
 
-      disposable = sandbox.monaco.languages.registerHoverProvider("typescript", {
-        provideHover: async function (model, position, token) {
+      sandbox.editor.onDidChangeCursorPosition(event => {
           const ts = sandbox.ts;
-          const pos = position;
+          const pos = event.position;
 
-          if (pos === null) {
-            return;
-          }
+          infoDS.clear();
 
           // ts.get
           const tspos = ts.getPositionOfLineAndCharacter(sourceFile, pos.lineNumber - 1, pos.column);
-          const highlightedASTNode = getDescendantAtRange(sandbox.ts, TreeMode.getChildren, sourceFile, [tspos, tspos + 1]);
+          const highlightedASTNode = getNodeAtPosition(sandbox.ts, sourceFile, tspos);
+          const model = sandbox.getModel()
 
           if ("flowNode" in highlightedASTNode) {
             const flowNode = highlightedASTNode["flowNode"];
@@ -54,8 +56,10 @@ const makePlugin = (utils: PluginUtils) => {
             }
 
             const renderNode = (graphNode: FlowGraphNode) => {
-              ds.p(graphNode.text.split(" ")[0])
+              const name = graphNode.text.split(" ")[0]
+              if(name === "Start") return
 
+              infoDS.p(name)
 
               if (hasNode(graphNode.flowNode)) {
                 if (graphNode.flowNode.node) {
@@ -66,9 +70,9 @@ const makePlugin = (utils: PluginUtils) => {
                     code: 1,
                     file: sourceFile,
                     length: astNode.getFullWidth(),
-                    messageText: getNodeText(astNode)
+                    messageText: getNodeText(astNode),
                   }
-                  ds.listDiags(sandbox as any, model, [diagForAST])
+                  infoDS.listDiags(model, [diagForAST])
                 }
               }
 
@@ -78,27 +82,26 @@ const makePlugin = (utils: PluginUtils) => {
               });
             };
 
-            ds.clear();
+            infoDS.title("Flow Graph")
 
-
-            ds.title("Flow Graph")
-
-            ds.subtitle("Beginning at " +  ts.SyntaxKind[node.kind] + " on line " + pos.lineNumber)
+            infoDS.subtitle("Starting backwards from:")
+            infoDS.createASTTree(node, { closedByDefault: true })
 
             renderNode(flowGraph.root);
-            ds.code(flowGraph.text);
+
+            graph.appendChild(document.createElement("hr"))
+            infoDS.subtitle("Text representation")
+            infoDS.code(flowGraph.text);
+          } else {
+            if (highlightedASTNode) {
+              infoDS.p(`No flow node found in '${highlightedASTNode.getText()}'`)
+            } else {
+              infoDS.p(`No TS AST node found`)
+            }
           }
-
-          return {
-            contents: [],
-          };
-        },
-      });
+        })
     },
 
-    didUnmount: () => {
-      disposable.dispose();
-    },
     // This is called occasionally as text changes in monaco,
     // it does not directly map 1 keyup to once run of the function
     // because it is intentionally called at most once every 0.3 seconds

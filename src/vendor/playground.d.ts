@@ -1,4 +1,5 @@
 declare type Sandbox = import("./sandbox").Sandbox;
+declare type Monaco = typeof import("monaco-editor");
 import { PluginUtils } from "./pluginUtils";
 import type React from "react";
 export { PluginUtils } from "./pluginUtils";
@@ -11,7 +12,7 @@ export interface PlaygroundPlugin {
     id: string;
     /** To show in the tabs */
     displayName: string;
-    /** Should this plugin be selected when the plugin is first loaded? Let's you check for query vars etc to load a particular plugin */
+    /** Should this plugin be selected when the plugin is first loaded? Lets you check for query vars etc to load a particular plugin */
     shouldBeSelected?: () => boolean;
     /** Before we show the tab, use this to set up your HTML - it will all be removed by the playground when someone navigates off the tab */
     willMount?: (sandbox: Sandbox, container: HTMLDivElement) => void;
@@ -38,64 +39,62 @@ interface PlaygroundConfig {
     /** Should this playground load up custom plugins from localStorage? */
     supportCustomPlugins: boolean;
 }
-export declare const setupPlayground: (sandbox: {
-    config: {
-        text: string;
-        useJavaScript: boolean;
-        compilerOptions: import("monaco-editor").languages.typescript.CompilerOptions;
-        monacoSettings?: import("monaco-editor").editor.IEditorOptions | undefined;
-        acquireTypes: boolean;
-        supportTwoslashCompilerOptions: boolean;
-        suppressAutomaticallyGettingDefaultText?: true | undefined;
-        suppressAutomaticallyGettingCompilerFlags?: true | undefined;
-        logger: {
-            log: (...args: any[]) => void;
-            error: (...args: any[]) => void;
-            groupCollapsed: (...args: any[]) => void;
-            groupEnd: (...args: any[]) => void;
-        };
-        domID: string;
-    };
-    supportedVersions: readonly ["3.8.3", "3.8.2", "3.7.5", "3.6.3", "3.5.1", "3.3.3", "3.1.6", "3.0.1", "2.8.1", "2.7.2", "2.4.1"];
-    editor: import("monaco-editor").editor.IStandaloneCodeEditor;
-    language: string;
-    monaco: typeof import("monaco-editor");
-    // getWorkerProcess: () => Promise<import("typescriptlang-org/static/js/sandbox/tsWorker").TypeScriptWorker>;
-    tsvfs: typeof import("./typescript-vfs");
-    getEmitResult: () => Promise<import("typescript").EmitOutput>;
-    getRunnableJS: () => Promise<string>;
-    getDTSForCode: () => Promise<string>;
-    getDomNode: () => HTMLElement;
-    getModel: () => import("monaco-editor").editor.ITextModel;
-    getText: () => string;
-    setText: (text: string) => void;
-    getAST: () => Promise<import("typescript").SourceFile>;
-    ts: typeof import("typescript");
-    createTSProgram: () => Promise<import("typescript").Program>;
-    compilerDefaults: import("monaco-editor").languages.typescript.CompilerOptions;
-    getCompilerOptions: () => import("monaco-editor").languages.typescript.CompilerOptions;
-    setCompilerSettings: (opts: import("monaco-editor").languages.typescript.CompilerOptions) => void;
-    updateCompilerSetting: (key: string | number, value: any) => void;
-    updateCompilerSettings: (opts: import("monaco-editor").languages.typescript.CompilerOptions) => void;
-    setDidUpdateCompilerSettings: (func: (opts: import("monaco-editor").languages.typescript.CompilerOptions) => void) => void;
-    // lzstring: typeof import("typescriptlang-org/static/js/sandbox/vendor/lzstring.min");
-    createURLQueryWithCompilerOptions: (sandbox: any, paramOverrides?: any) => string;
-    getTwoSlashComplierOptions: (code: string) => any;
-    languageServiceDefaults: import("monaco-editor").languages.typescript.LanguageServiceDefaults;
-    filepath: string;
-}, monaco: typeof import("monaco-editor"), config: PlaygroundConfig, i: (key: string) => string, react: typeof React) => {
+export declare const setupPlayground: (sandbox: Sandbox, monaco: Monaco, config: PlaygroundConfig, i: (key: string) => string, react: typeof React) => {
     exporter: {
         openProjectInStackBlitz: () => void;
         openProjectInCodeSandbox: () => void;
-        reportIssue: () => Promise<void>;
-        copyAsMarkdownIssue: () => Promise<void>;
-        copyForChat: () => void;
-        copyForChatWithPreview: () => void;
+        copyAsMarkdownIssue: (e: React.MouseEvent<Element, MouseEvent>) => Promise<boolean>;
+        copyForChat: (e: React.MouseEvent<Element, MouseEvent>) => boolean;
+        copyForChatWithPreview: (e: React.MouseEvent<Element, MouseEvent>) => boolean;
         openInTSAST: () => void;
+        openInBugWorkbench: () => void;
+        exportAsTweet: () => void;
     };
     // ui: import("./createUI").UI;
     registerPlugin: (plugin: PlaygroundPlugin) => void;
     plugins: PlaygroundPlugin[];
+    getCurrentPlugin: () => PlaygroundPlugin;
     tabs: HTMLButtonElement[];
+    setDidUpdateTab: (func: (newPlugin: PlaygroundPlugin, previousPlugin: PlaygroundPlugin) => void) => void;
+    createUtils: (sb: any, react: typeof React) => {
+        el: (str: string, elementType: string, container: Element) => HTMLElement;
+        requireURL: (path: string) => string;
+        react: typeof React;
+        createDesignSystem: (container: Element) => {
+            container: Element;
+            clear: () => void;
+            code: (code: string) => HTMLElement;
+            title: (title: string) => HTMLElement;
+            subtitle: (subtitle: string) => HTMLElement;
+            p: (subtitle: string) => HTMLElement;
+            showEmptyScreen: (message: string) => HTMLDivElement;
+            listDiags: (model: import("monaco-editor").editor.ITextModel, diags: import("typescript").DiagnosticRelatedInformation[]) => HTMLUListElement;
+            clearDeltaDecorators: (force?: true | undefined) => void;
+            localStorageOption: (setting: import("./ds/createDesignSystem").LocalStorageOption) => HTMLLIElement;
+            showOptionList: (options: import("./ds/createDesignSystem").LocalStorageOption[], style: import("./ds/createDesignSystem").OptionsListConfig) => void;
+            createTextInput: (config: {
+                id: string;
+                placeholder: string;
+                onChanged?: ((text: string, input: HTMLInputElement) => void) | undefined;
+                onEnter: (text: string, input: HTMLInputElement) => void;
+                value?: string | undefined;
+                keepValueAcrossReloads?: true | undefined;
+                isEnabled?: ((input: HTMLInputElement) => boolean) | undefined;
+            }) => HTMLFormElement;
+            createASTTree: (node: import("typescript").Node, settings?: {
+                closedByDefault?: true | undefined;
+            } | undefined) => HTMLDivElement;
+            button: (settings: {
+                label: string;
+                onclick?: ((ev: MouseEvent) => void) | undefined;
+            }) => HTMLInputElement;
+            createTabBar: () => HTMLDivElement;
+            createTabButton: (text: string) => HTMLButtonElement;
+            declareRestartRequired: (i?: ((key: string) => string) | undefined) => void;
+            createSubDesignSystem: () => any;
+        };
+        flashHTMLElement: (element: HTMLElement) => void;
+        setNotifications: (pluginID: string, amount: number) => void;
+    };
 };
 export declare type Playground = ReturnType<typeof setupPlayground>;
