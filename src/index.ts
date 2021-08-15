@@ -30,7 +30,7 @@ const makePlugin = (utils: PluginUtils) => {
           infoDS.clear();
 
           // ts.get
-          const tspos = ts.getPositionOfLineAndCharacter(sourceFile, pos.lineNumber - 1, pos.column);
+          const tspos = ts.getPositionOfLineAndCharacter(sourceFile, pos.lineNumber, pos.column);
           const highlightedASTNode = getNodeAtPosition(sandbox.ts, sourceFile, tspos);
           const model = sandbox.getModel()
 
