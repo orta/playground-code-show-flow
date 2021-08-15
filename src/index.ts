@@ -30,8 +30,8 @@ const makePlugin = (utils: PluginUtils) => {
           infoDS.clear();
 
           // ts.get
-          const tspos = ts.getPositionOfLineAndCharacter(sourceFile, pos.lineNumber, pos.column);
-          const highlightedASTNode = getNodeAtPosition(sandbox.ts, sourceFile, tspos);
+          const tspos = ts.getPositionOfLineAndCharacter(sourceFile, pos.lineNumber - 1, pos.column);
+          const highlightedASTNode = getNodeAtPosition(sandbox.ts, sourceFile, tspos - 1);
           const model = sandbox.getModel()
 
           if ("flowNode" in highlightedASTNode) {
